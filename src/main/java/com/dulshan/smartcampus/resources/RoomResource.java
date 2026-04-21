@@ -1,5 +1,7 @@
 package com.dulshan.smartcampus.resources;
 
+import com.dulshan.smartcampus.exceptions.ErrorResponse;
+import com.dulshan.smartcampus.exceptions.RoomNotEmptyException;
 import com.dulshan.smartcampus.models.Room;
 import com.dulshan.smartcampus.store.DataStore;
 import jakarta.ws.rs.Consumes;
@@ -10,13 +12,34 @@ import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriInfo;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
 @Path("/rooms")
 public class RoomResource {
+
+    @Context
+    private UriInfo uriInfo;
+
+    private Response jsonError(Response.Status status, String message) {
+        ErrorResponse error = new ErrorResponse(
+                status.getStatusCode(),
+                status.getReasonPhrase(),
+                message,
+                uriInfo != null ? uriInfo.getPath() : "",
+                System.currentTimeMillis()
+        );
+
+        return Response.status(status)
+                .type(MediaType.APPLICATION_JSON)
+                .entity(error)
+                .build();
+    }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -32,15 +55,23 @@ public class RoomResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response createRoom(Room newRoom) {
+        if (newRoom == null || newRoom.getId() == null || newRoom.getId().trim().isEmpty()) {
+            return jsonError(Response.Status.BAD_REQUEST, "Room payload or ID is missing.");
+        }
+
         if (DataStore.rooms.containsKey(newRoom.getId())) {
-            return Response.status(Response.Status.CONFLICT)
-                           .entity("Room ID already exists.")
-                           .build();
+            return jsonError(Response.Status.CONFLICT, "Room ID already exists.");
+        }
+
+        if (newRoom.getSensorIds() == null) {
+            newRoom.setSensorIds(new ArrayList<>());
         }
         
         DataStore.rooms.put(newRoom.getId(), newRoom);
+
+        URI location = uriInfo.getAbsolutePathBuilder().path(newRoom.getId()).build();
         
-        return Response.status(Response.Status.CREATED)
+        return Response.created(location)
                        .entity(newRoom)
                        .build();
     }
@@ -54,9 +85,7 @@ public class RoomResource {
         Room room = DataStore.rooms.get(id);
         
         if (room == null) {
-            return Response.status(Response.Status.NOT_FOUND)
-                           .entity("Room not found.")
-                           .build();
+            return jsonError(Response.Status.NOT_FOUND, "Room not found.");
         }
         
         // 3. If it does exist, hand the room back to the user
@@ -70,16 +99,12 @@ public class RoomResource {
         Room room = DataStore.rooms.get(id);
 
         if (room == null) {
-            return Response.status(Response.Status.NOT_FOUND)
-                           .entity("Room not found.")
-                           .build();
+            return jsonError(Response.Status.NOT_FOUND, "Room not found.");
         }
 
         // RUBRIC REQUIREMENT: Check if room has sensors attached
         if (room.getSensorIds() != null && !room.getSensorIds().isEmpty()) {
-            return Response.status(Response.Status.CONFLICT)
-                           .entity("Cannot delete room: It has active sensors attached.")
-                           .build();
+            throw new RoomNotEmptyException("Cannot delete room: It has active sensors attached.");
         }
 
         DataStore.rooms.remove(id);

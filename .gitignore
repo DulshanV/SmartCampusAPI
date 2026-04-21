@@ -5,3 +5,10 @@ nb-configuration.xml
 .vscode/
 .DS_Store
 Thumbs.db
+5COSC022W_Coursework_Specification.md
+CSA_2026_Coursework_Rubric_Final.v3.csv
+hs_err_pid*.log
+REPORT_ANSWERS.md
+SUBMISSION_CHECKLIST.md
+.gitignore
+SmartCampusAPI.postman_collection.json
