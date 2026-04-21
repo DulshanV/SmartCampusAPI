@@ -18,10 +18,12 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Path("/rooms")
-public class RoomResource {
+public class SensorRoom {
 
     @Context
     private UriInfo uriInfo;
@@ -108,6 +110,12 @@ public class RoomResource {
         }
 
         DataStore.rooms.remove(id);
-        return Response.ok("Room " + id + " deleted successfully.").build();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("status", 200);
+        result.put("message", "Room " + id + " deleted successfully.");
+        result.put("timestamp", System.currentTimeMillis());
+
+        return Response.ok(result).build();
     }
 }
