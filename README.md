@@ -17,31 +17,31 @@ http://localhost:8080/SmartCampusAPI/api/v1
 ```mermaid
 graph TD
     subgraph Client
-        PM[Postman / curl\nHTTP Client]
+        PM["Postman / curl - HTTP Client"]
     end
 
-    subgraph JAXRS["JAX-RS Runtime — ApplicationPath /api/v1"]
-        CFG[ApiConfig\n@ApplicationPath]
-        LOG[ApiLoggingFilter\nContainerRequestFilter\nContainerResponseFilter]
+    subgraph JAXRS["JAX-RS Runtime - ApplicationPath /api/v1"]
+        CFG["ApiConfig - @ApplicationPath"]
+        LOG["ApiLoggingFilter - ContainerRequestFilter + ContainerResponseFilter"]
     end
 
     subgraph Resources
-        DISC[DiscoveryResource\nGET /]
-        ROOM[SensorRoom\nGET · POST · DELETE /rooms]
-        SENS[SensorResource\nGET · POST /sensors]
-        READ[SensorReadingResource\nGET · POST /sensors/id/readings]
+        DISC["DiscoveryResource - GET /"]
+        ROOM["SensorRoom - GET, POST, DELETE /rooms"]
+        SENS["SensorResource - GET, POST /sensors"]
+        READ["SensorReadingResource - GET, POST /sensors/id/readings"]
     end
 
-    subgraph ExceptionHandling["Exception Handling — @Provider"]
-        RNEM[RoomNotEmptyExceptionMapper\nRoomNotEmptyException → 409]
-        LRNM[LinkedResourceNotFoundExceptionMapper\nLinkedResourceNotFoundException → 422]
-        SUEM[SensorUnavailableExceptionMapper\nSensorUnavailableException → 403]
-        GEX[GlobalExceptionMapper\nThrowable → 500]
-        ERR[ErrorResponse\nJSON error body]
+    subgraph ExceptionHandling["Exception Handling - @Provider"]
+        RNEM["RoomNotEmptyExceptionMapper - 409"]
+        LRNM["LinkedResourceNotFoundExceptionMapper - 422"]
+        SUEM["SensorUnavailableExceptionMapper - 403"]
+        GEX["GlobalExceptionMapper - 500"]
+        ERR["ErrorResponse - JSON error body"]
     end
 
     subgraph Storage
-        DS[(DataStore\nConcurrentHashMap)]
+        DS[("DataStore - ConcurrentHashMap")]
     end
 
     PM -->|HTTP Request| LOG
@@ -50,29 +50,29 @@ graph TD
     CFG --> DISC
     CFG --> ROOM
     CFG --> SENS
-    SENS -->|"@Path /{id}/readings\nsub-resource locator"| READ
+    SENS -->|sub-resource locator| READ
 
-    ROOM -->|"read / write rooms"| DS
-    SENS -->|"read / write sensors"| DS
-    READ -->|"read / write readings"| DS
-    READ -.->|"side-effect: PATCH\ncurrentValue on parent"| DS
+    ROOM -->|read / write rooms| DS
+    SENS -->|read / write sensors| DS
+    READ -->|read / write readings| DS
+    READ -.->|updates currentValue| DS
 
-    ROOM -->|"throw RoomNotEmptyException"| RNEM
-    SENS -->|"throw LinkedResourceNotFoundException"| LRNM
-    READ -->|"throw SensorUnavailableException"| SUEM
-    ROOM & SENS & READ -->|"unhandled Throwable"| GEX
+    ROOM -->|RoomNotEmptyException| RNEM
+    SENS -->|LinkedResourceNotFoundException| LRNM
+    READ -->|SensorUnavailableException| SUEM
+    ROOM & SENS & READ -->|unhandled Throwable| GEX
 
     RNEM --> ERR
     LRNM --> ERR
     SUEM --> ERR
     GEX --> ERR
 
-    DISC -->|"200 metadata JSON"| PM
-    ROOM -->|"201 / 200 / 404 JSON"| PM
-    SENS -->|"201 / 200 JSON"| PM
-    READ -->|"201 / 200 JSON"| PM
-    ERR -->|"4xx / 500 JSON"| PM
-    LOG -->|"log status code"| LOG
+    DISC -->|200 metadata JSON| PM
+    ROOM -->|201 / 200 / 404 JSON| PM
+    SENS -->|201 / 200 JSON| PM
+    READ -->|201 / 200 JSON| PM
+    ERR -->|4xx / 500 JSON| PM
+    LOG -->|log status code| LOG
 ```
 
 ### Key Design Decisions
