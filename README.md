@@ -86,35 +86,6 @@ graph TD
 | **Logging** | `ApiLoggingFilter` implements both `ContainerRequestFilter` and `ContainerResponseFilter` — logs every request method, URI, and response status centrally |
 | **Discovery / HATEOAS** | `DiscoveryResource` at `GET /api/v1` exposes all resource links at runtime |
 
-### Data Model (ERD)
-
-```mermaid
-erDiagram
-    ROOM {
-        String id PK "e.g. LAB-201"
-        String name "Human-readable label"
-        int capacity "Max occupancy"
-        List~String~ sensorIds FK "References Sensor.id"
-    }
-
-    SENSOR {
-        String id PK "e.g. TEMP-101"
-        String type "Temperature | CO2 | Occupancy"
-        String status "ACTIVE | MAINTENANCE | OFFLINE"
-        double currentValue "Latest reading — updated on POST /readings"
-        String roomId FK "References Room.id"
-    }
-
-    SENSORREADING {
-        String id PK "e.g. READ-001"
-        long timestamp "Epoch ms — auto-generated on POST"
-        double value "Measured metric"
-    }
-
-    ROOM ||--o{ SENSOR : "contains (sensorIds list)"
-    SENSOR ||--o{ SENSORREADING : "has reading history"
-```
-
 ### Endpoint Summary
 
 | Method | Path | Response | Description |
