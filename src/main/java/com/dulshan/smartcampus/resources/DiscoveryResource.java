@@ -26,6 +26,7 @@ public class DiscoveryResource {
         endpoints.put("rooms", "/api/v1/rooms");
         endpoints.put("sensors", "/api/v1/sensors");
         endpoints.put("sensorFilterExample", "/api/v1/sensors?type=Temperature");
+        endpoints.put("errorTrigger", "/api/v1/errors/trigger-500");
         
         metadata.put("endpoints", endpoints);
 

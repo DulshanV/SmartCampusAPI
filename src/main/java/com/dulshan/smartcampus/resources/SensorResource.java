@@ -26,8 +26,7 @@ public class SensorResource {
                 status.getReasonPhrase(),
                 message,
                 uriInfo != null ? uriInfo.getPath() : "",
-                System.currentTimeMillis()
-        );
+                System.currentTimeMillis());
 
         return Response.status(status)
                 .type(MediaType.APPLICATION_JSON)
@@ -42,8 +41,8 @@ public class SensorResource {
 
         if (type != null && !type.isEmpty()) {
             sensorList = sensorList.stream()
-                .filter(s -> s.getType().equalsIgnoreCase(type))
-                .collect(Collectors.toList());
+                    .filter(s -> s.getType().equalsIgnoreCase(type))
+                    .collect(Collectors.toList());
         }
 
         return Response.ok(sensorList).build();
@@ -75,7 +74,7 @@ public class SensorResource {
         URI location = uriInfo.getAbsolutePathBuilder().path(newSensor.getId()).build();
         return Response.created(location).entity(newSensor).build();
     }
-    
+
     @Path("/{id}/readings")
     public SensorReadingResource getReadingResource(@PathParam("id") String sensorId) {
         return new SensorReadingResource(sensorId);

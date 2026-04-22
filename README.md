@@ -33,6 +33,7 @@ graph TD
     end
 
     subgraph ExceptionHandling["Exception Handling - @Provider"]
+        BREM["BadRequestExceptionMapper - 400"]
         RNEM["RoomNotEmptyExceptionMapper - 409"]
         LRNM["LinkedResourceNotFoundExceptionMapper - 422"]
         SUEM["SensorUnavailableExceptionMapper - 403"]
@@ -41,7 +42,7 @@ graph TD
     end
 
     subgraph Storage
-        DS[("DataStore - ConcurrentHashMap")]
+        DS[("DataStore - HashMap")]
     end
 
     PM -->|HTTP Request| LOG
@@ -58,10 +59,12 @@ graph TD
     READ -.->|updates currentValue| DS
 
     ROOM -->|RoomNotEmptyException| RNEM
+    ROOM & SENS & READ -->|BadRequestException| BREM
     SENS -->|LinkedResourceNotFoundException| LRNM
     READ -->|SensorUnavailableException| SUEM
     ROOM & SENS & READ -->|unhandled Throwable| GEX
 
+    BREM --> ERR
     RNEM --> ERR
     LRNM --> ERR
     SUEM --> ERR
@@ -79,10 +82,10 @@ graph TD
 
 | Concern | Approach |
 |---|---|
-| **Storage** | Static `ConcurrentHashMap` / `ArrayList` in `DataStore` — shared across all request instances |
+| **Storage** | Static `HashMap` / `ArrayList` in `DataStore` — shared across all request instances |
 | **Resource lifecycle** | Request-scoped (default) — fresh instance per HTTP request |
 | **Sub-resource pattern** | `SensorResource` delegates `/readings` routes to `SensorReadingResource` via a sub-resource locator |
-| **Error handling** | Four typed `ExceptionMapper` providers (`409`, `422`, `403`, `500`) — all return structured JSON, no raw stack traces |
+| **Error handling** | Five `ExceptionMapper` providers (`400`, `403`, `409`, `422`, `500`) — all return structured JSON, no raw stack traces |
 | **Logging** | `ApiLoggingFilter` implements both `ContainerRequestFilter` and `ContainerResponseFilter` — logs every request method, URI, and response status centrally |
 | **Discovery / HATEOAS** | `DiscoveryResource` at `GET /api/v1` exposes all resource links at runtime |
 
@@ -99,6 +102,7 @@ graph TD
 | `POST` | `/api/v1/sensors` | 201 / 422 | Register a sensor (validates roomId exists) |
 | `GET` | `/api/v1/sensors/{id}/readings` | 200 | Get reading history for a sensor |
 | `POST` | `/api/v1/sensors/{id}/readings` | 201 / 403 | Post a reading (blocked if sensor is MAINTENANCE) |
+| `GET` | `/api/v1/errors/trigger-500` | 500 | Intentionally trigger runtime failure to validate global mapper |
 
 ### Error Response Format
 
@@ -190,7 +194,7 @@ If resource classes were instead configured as singletons, instance fields would
 **Question:** Why is hypermedia considered a hallmark of advanced REST design, and how does it help clients?
 
 **Answer:**
-The `DiscoveryResource` class is mapped to `@Path("/")` and serves as the API's single entry point at `GET /api/v1`. Its `getDiscoveryInfo()` method builds a JSON response containing the API name, version ("v1"), description, admin contact, a self-link, the server timestamp, and an endpoints map pointing clients to `/api/v1/rooms`, `/api/v1/sensors`, and a filter example (`/api/v1/sensors?type=Temperature`).
+The `DiscoveryResource` class is mapped to `@Path("/")` and serves as the API's single entry point at `GET /api/v1`. Its `getDiscoveryInfo()` method builds a JSON response containing the API name, version ("v1"), description, admin contact, a self-link, the server timestamp, and an endpoints map pointing clients to `/api/v1/rooms`, `/api/v1/sensors`, a filter example (`/api/v1/sensors?type=Temperature`), and a dedicated global-error test endpoint (`/api/v1/errors/trigger-500`).
 
 This design follows the **HATEOAS** (Hypermedia as the Engine of Application State) principle, which is considered a hallmark of advanced REST because:
 
@@ -301,7 +305,7 @@ A 404 should be reserved for cases where the requested URL path does not match a
 **Question:** What are the cybersecurity risks of exposing internal stack traces?
 
 **Answer:**
-The `GlobalExceptionMapper` class implements `ExceptionMapper<Throwable>` and is annotated with `@Provider`, making it the catch-all handler for any unhandled exception. When an unexpected runtime error occurs (such as a `NullPointerException` or `IndexOutOfBoundsException`), this mapper intercepts it, logs the full stack trace server-side using `java.util.logging.Logger` at SEVERE level, and returns a clean **HTTP 500** response with a generic JSON `ErrorResponse` body containing only "An unexpected error occurred. Please contact support." The mapper also passes through sub-500 `WebApplicationException`s (like 404 or 405 from the framework) so they are not incorrectly converted into 500 errors.
+The `GlobalExceptionMapper` class implements `ExceptionMapper<Throwable>` and is annotated with `@Provider`, making it the catch-all handler for any unhandled exception. When an unexpected runtime error occurs (such as a `NullPointerException` or `IndexOutOfBoundsException`), this mapper intercepts it, logs the full stack trace server-side using `java.util.logging.Logger` at SEVERE level, and returns a clean **HTTP 500** response with a generic JSON `ErrorResponse` body containing only "An unexpected error occurred. Please contact support." The mapper also passes through sub-500 `WebApplicationException`s (like 404 or 405 from the framework) so they are not incorrectly converted into 500 errors. In the demo, this is validated via `GET /api/v1/errors/trigger-500` (which intentionally throws a runtime exception), while malformed request bodies are handled separately as clean **HTTP 400** JSON responses by `BadRequestExceptionMapper`.
 
 Exposing raw stack traces to external API consumers would create serious cybersecurity risks:
 

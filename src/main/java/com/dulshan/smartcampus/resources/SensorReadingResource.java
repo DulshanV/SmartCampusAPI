@@ -27,8 +27,7 @@ public class SensorReadingResource {
                 status.getReasonPhrase(),
                 message,
                 uriInfo != null ? uriInfo.getPath() : "",
-                System.currentTimeMillis()
-        );
+                System.currentTimeMillis());
 
         return Response.status(status)
                 .type(MediaType.APPLICATION_JSON)
@@ -59,7 +58,8 @@ public class SensorReadingResource {
         }
 
         if ("MAINTENANCE".equalsIgnoreCase(DataStore.sensors.get(sensorId).getStatus())) {
-            throw new SensorUnavailableException("Sensor " + sensorId + " is under maintenance and cannot accept new readings.");
+            throw new SensorUnavailableException(
+                    "Sensor " + sensorId + " is under maintenance and cannot accept new readings.");
         }
 
         if (reading.getId() == null || reading.getId().trim().isEmpty()) {
@@ -76,7 +76,15 @@ public class SensorReadingResource {
             DataStore.sensors.get(sensorId).setCurrentValue(reading.getValue());
         }
 
-        URI location = uriInfo.getAbsolutePathBuilder().path(reading.getId()).build();
-        return Response.created(location).entity(reading).build();
+        Response.ResponseBuilder responseBuilder;
+        if (uriInfo != null) {
+            URI location = uriInfo.getAbsolutePathBuilder().path(reading.getId()).build();
+            responseBuilder = Response.created(location);
+        } else {
+            // Fallback for runtimes where @Context injection on sub-resources is unavailable.
+            responseBuilder = Response.status(Response.Status.CREATED);
+        }
+
+        return responseBuilder.entity(reading).build();
     }
 }
