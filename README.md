@@ -332,4 +332,3 @@ This approach is superior to placing manual `Logger.info()` calls in every resou
 3. **Cleaner resource methods:** `SensorRoom.createRoom()`, `SensorResource.createSensor()`, and `SensorReadingResource.addReading()` contain only business logic — no logging boilerplate cluttering the code.
 4. **Centralized policy changes:** adjusting the log format, adding headers to the log output, or changing the log level requires editing only `ApiLoggingFilter`, not touching every resource class.
 
-This is a textbook application of the cross-cutting concern pattern that JAX-RS filters are designed to solve.
